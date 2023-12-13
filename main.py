@@ -70,6 +70,10 @@ if __name__ == "__main__":
                 obj["unix_time"] = obj["record"][1] + 978307200
 
                 app = obj["plist"]["app"]
+
+                if app not in CONFIG["app_map"]:
+                    continue
+
                 app = CONFIG["app_map"].get(app) or app
                 title = obj["plist"]["req"]["titl"]
                 body = obj["plist"]["req"]["body"]
