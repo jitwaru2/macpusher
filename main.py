@@ -12,6 +12,16 @@ import datetime
 from handlers import pushbullet_forwarder
 from os.path import expanduser
 import json
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+
+logger = logging.getLogger(__name__)
 
 
 home = expanduser("~")
@@ -21,15 +31,15 @@ with open(config_path) as f:
     CONFIG = json.load(f)
 
 
+logger.info("Loaded config: {}".format(CONFIG))
+
+
 if not CONFIG.get("verify_ssl"):
+    logger.info("Disabling SSL verification")
     os.environ["CURL_CA_BUNDLE"] = ""
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s - %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
-
     darwin_user_folder = subprocess.run(
         ['getconf', 'DARWIN_USER_DIR'], stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ).stdout.decode("utf-8").strip()
@@ -61,11 +71,17 @@ if __name__ == "__main__":
 
                 app = obj["plist"]["app"]
                 app = CONFIG["app_map"].get(app) or app
-                pushbullet_forwarder.handle(
-                    CONFIG["domain"],
-                    app,
-                    obj["plist"]["req"]["titl"],
-                    obj["plist"]["req"]["body"],
-                )
+                title = obj["plist"]["req"]["titl"]
+                body = obj["plist"]["req"]["body"]
+                try:
+                    logger.info("Got notification context: {} | {} | {}".format(CONFIG["domain"], app, title, body))
+                    pushbullet_forwarder.handle(
+                        CONFIG["domain"],
+                        app,
+                        title,
+                        body,
+                    )
+                except Exception:
+                    logger.exception("Error")
 
         time.sleep(5)
